@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SSTT · Gestión de Materiales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & VARIABLES ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --surface2:  #1c2330;
+  --border:    #30363d;
+  --border2:   #21262d;
+  --text:      #e6edf3;
+  --text2:     #8b949e;
+  --text3:     #484f58;
+  --accent:    #e8a020;
+  --accent2:   #f0c060;
+  --blue:      #388bfd;
+  --green:     #3fb950;
+  --red:       #f85149;
+  --orange:    #d29922;
+  --purple:    #bc8cff;
+  --r:         10px;
+  --r2:        6px;
+  --mono:      'DM Mono', monospace;
+  --display:   'Syne', sans-serif;
+  --body:      'DM Sans', sans-serif;
+  --shadow:    0 8px 32px rgba(0,0,0,.4);
+}
+
+html { font-size: 15px; }
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── UTILIDADES ────────────────────────────────────────────────────────── */
+.hidden   { display: none !important; }
+.mono     { font-family: var(--mono); }
+.accent   { color: var(--accent); }
+.green    { color: var(--green); }
+.red      { color: var(--red); }
+.muted    { color: var(--text2); }
+.fw600    { font-weight: 600; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: .72rem; font-weight: 500; letter-spacing: .03em;
+  font-family: var(--mono);
+}
+.badge-pending  { background: rgba(232,160,32,.15); color: var(--accent); border: 1px solid rgba(232,160,32,.3); }
+.badge-sent     { background: rgba(56,139,253,.15);  color: var(--blue);   border: 1px solid rgba(56,139,253,.3); }
+.badge-received { background: rgba(188,140,255,.15); color: var(--purple); border: 1px solid rgba(188,140,255,.3); }
+.badge-approved { background: rgba(63,185,80,.15);   color: var(--green);  border: 1px solid rgba(63,185,80,.3); }
+.badge-rejected { background: rgba(248,81,73,.15);   color: var(--red);    border: 1px solid rgba(248,81,73,.3); }
+.badge-delivered{ background: rgba(63,185,80,.25);   color: #7ee787;       border: 1px solid rgba(63,185,80,.4); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 20px; border-radius: var(--r2); border: none; cursor: pointer;
+  font-family: var(--body); font-size: .88rem; font-weight: 500;
+  transition: all .18s ease; text-decoration: none;
+}
+.btn:active { transform: scale(.97); }
+.btn-primary  { background: var(--accent);  color: #000; }
+.btn-primary:hover  { background: var(--accent2); }
+.btn-ghost    { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover    { background: var(--surface2); color: var(--text); }
+.btn-danger   { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid rgba(248,81,73,.3); }
+.btn-danger:hover   { background: rgba(248,81,73,.25); }
+.btn-success  { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid rgba(63,185,80,.3); }
+.btn-success:hover  { background: rgba(63,185,80,.25); }
+.btn-sm { padding: 6px 13px; font-size: .8rem; }
+.btn-block { width: 100%; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 20px;
+}
+.card + .card { margin-top: 12px; }
+
+input, select, textarea {
+  width: 100%; padding: 10px 13px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r2); color: var(--text);
+  font-family: var(--body); font-size: .9rem;
+  transition: border-color .15s;
+  -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(232,160,32,.1);
+}
+input::placeholder, textarea::placeholder { color: var(--text3); }
+select option { background: var(--surface2); }
+label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5px; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; }
+.form-group { margin-bottom: 14px; }
+
+.divider {
+  height: 1px; background: var(--border2); margin: 20px 0;
+}
+
+/* ── FONDO ANIMADO ─────────────────────────────────────────────────────── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(56,139,253,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,139,253,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── PANTALLA LOGIN ────────────────────────────────────────────────────── */
+#screen-login {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.login-box {
+  width: 100%; max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 28px;
+  box-shadow: var(--shadow), 0 0 60px rgba(232,160,32,.06);
+  animation: fadeUp .4s ease;
+}
+.login-logo {
+  font-family: var(--display); font-size: 1.5rem; font-weight: 800;
+  letter-spacing: -.02em; margin-bottom: 4px;
+}
+.login-logo span { color: var(--accent); }
+.login-sub { font-size: .82rem; color: var(--text2); margin-bottom: 28px; }
+
+.pin-row {
+  display: flex; gap: 8px; justify-content: center; margin: 16px 0 20px;
+}
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--border); background: transparent;
+  transition: all .2s;
+}
+.pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+
+.pin-pad {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+  margin-bottom: 16px;
+}
+.pin-key {
+  aspect-ratio: 1; border-radius: var(--r2);
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-size: 1.1rem; font-family: var(--mono);
+  cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.pin-key:active { background: var(--accent); color: #000; transform: scale(.93); }
+.pin-key.del { font-size: .9rem; color: var(--text2); }
+
+.login-error {
+  background: rgba(248,81,73,.1); border: 1px solid rgba(248,81,73,.3);
+  border-radius: var(--r2); padding: 10px 14px;
+  color: var(--red); font-size: .82rem; margin-top: 12px;
+  display: none;
+}
+
+/* ── APP SHELL ─────────────────────────────────────────────────────────── */
+#app { display: none; flex-direction: column; min-height: 100vh; position: relative; z-index: 1; }
+
+/* Top bar */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(13,17,23,.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; height: 54px;
+}
+.topbar-brand { font-family: var(--display); font-weight: 800; font-size: 1rem; letter-spacing: -.01em; }
+.topbar-brand span { color: var(--accent); }
+.topbar-user {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .8rem; color: var(--text2);
+}
+.user-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--orange));
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 700; color: #000;
+}
+
+/* Main content */
+.main { flex: 1; padding: 16px; max-width: 560px; margin: 0 auto; width: 100%; }
+
+/* Bottom nav */
+.bottom-nav {
+  position: sticky; bottom: 0;
+  background: rgba(22,27,34,.96); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border2);
+  display: flex;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px; padding: 10px 4px;
+  cursor: pointer; transition: all .2s;
+  font-size: .68rem; color: var(--text3); font-weight: 500;
+  border: none; background: none;
+}
+.nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.nav-item.active { color: var(--accent); }
+.nav-item.hidden-controller { display: none; }
+
+/* ── PANTALLAS ─────────────────────────────────────────────────────────── */
+.screen { display: none; animation: fadeUp .25s ease; }
+.screen.active { display: block; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── DASHBOARD ─────────────────────────────────────────────────────────── */
+.screen-title {
+  font-family: var(--display); font-size: 1.35rem; font-weight: 700;
+  letter-spacing: -.02em; margin-bottom: 16px;
+}
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 16px;
+}
+.kpi-label { font-size: .72rem; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.kpi-value { font-family: var(--display); font-size: 1.6rem; font-weight: 700; line-height: 1; }
+.kpi-sub   { font-size: .72rem; color: var(--text3); margin-top: 4px; }
+
+.progress-bar {
+  height: 6px; background: var(--border2); border-radius: 3px; overflow: hidden; margin-top: 8px;
+}
+.progress-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--green), var(--accent));
+  transition: width .6s ease;
+}
+
+.section-header {
+  font-size: .75rem; font-weight: 600; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 10px; margin-top: 20px;
+}
+
+.soc-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid var(--border2);
+  font-size: .88rem;
+}
+.soc-row:last-child { border-bottom: none; }
+
+/* ── SOLICITUDES LIST ─────────────────────────────────────────────────── */
+.sol-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 16px; margin-bottom: 10px;
+  transition: border-color .2s;
+}
+.sol-card:hover { border-color: var(--border); }
+.sol-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.sol-id { font-family: var(--mono); font-size: .78rem; color: var(--text2); }
+.sol-proveedor { font-weight: 600; font-size: .95rem; margin-bottom: 4px; }
+.sol-materiales { font-size: .82rem; color: var(--text2); line-height: 1.5; white-space: pre-line; }
+.sol-meta { display: flex; gap: 12px; margin-top: 10px; font-size: .75rem; color: var(--text3); align-items: center; flex-wrap: wrap; }
+.sol-firma { font-family: var(--mono); font-size: .72rem; color: var(--text3); }
+
+.sol-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+.filter-bar { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+.filter-chip {
+  flex-shrink: 0; padding: 5px 14px; border-radius: 20px; font-size: .78rem;
+  border: 1px solid var(--border); background: transparent; color: var(--text2);
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.filter-chip.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+
+/* ── NUEVA SOLICITUD ─────────────────────────────────────────────────────*/
+.material-item {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 12px; margin-bottom: 8px;
+  position: relative;
+}
+.material-row { display: grid; grid-template-columns: 1fr 80px 90px; gap: 8px; align-items: end; }
+.material-remove {
+  position: absolute; top: 8px; right: 8px;
+  background: none; border: none; color: var(--text3); cursor: pointer; font-size: 1rem;
+  line-height: 1; padding: 2px;
+}
+.material-remove:hover { color: var(--red); }
+
+.autocomplete-box {
+  position: absolute; z-index: 200; width: 100%;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r2); margin-top: 2px;
+  box-shadow: var(--shadow); max-height: 180px; overflow-y: auto;
+}
+.autocomplete-item {
+  padding: 9px 13px; font-size: .85rem; cursor: pointer;
+  border-bottom: 1px solid var(--border2); transition: background .1s;
+}
+.autocomplete-item:hover { background: var(--surface); color: var(--accent); }
+.autocomplete-item:last-child { border-bottom: none; }
+
+.urgencia-opts { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.urgencia-opt {
+  padding: 10px 8px; border-radius: var(--r2); text-align: center;
+  border: 1px solid var(--border); cursor: pointer; font-size: .8rem;
+  transition: all .15s; background: transparent; color: var(--text2);
+}
+.urgencia-opt.selected { border-color: var(--accent); background: rgba(232,160,32,.1); color: var(--accent); font-weight: 600; }
+
+/* ── ALBARÁN ────────────────────────────────────────────────────────────── */
+.photo-zone {
+  border: 2px dashed var(--border); border-radius: var(--r);
+  padding: 32px 20px; text-align: center; cursor: pointer;
+  transition: all .2s; background: var(--surface2);
+}
+.photo-zone:hover { border-color: var(--accent); background: rgba(232,160,32,.04); }
+.photo-zone svg { width: 36px; height: 36px; stroke: var(--text3); margin-bottom: 10px; }
+.photo-preview { width: 100%; border-radius: var(--r2); margin-top: 10px; display: none; }
+
+/* ── APROBACIÓN CONTROLLER ───────────────────────────────────────────────*/
+.presup-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 16px; margin-bottom: 10px;
+}
+.presup-importe {
+  font-family: var(--display); font-size: 1.4rem; font-weight: 700;
+  color: var(--accent); margin: 8px 0;
+}
+
+/* ── USUARIOS ────────────────────────────────────────────────────────────*/
+.user-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: var(--surface);
+  border: 1px solid var(--border2); border-radius: var(--r2);
+  margin-bottom: 8px;
+}
+.user-info .user-name { font-weight: 600; font-size: .9rem; }
+.user-info .user-meta { font-size: .75rem; color: var(--text2); margin-top: 2px; }
+
+/* ── TOAST ───────────────────────────────────────────────────────────────*/
+#toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 30px; padding: 10px 20px;
+  font-size: .85rem; color: var(--text);
+  box-shadow: var(--shadow); z-index: 999;
+  opacity: 0; transition: all .3s ease; pointer-events: none; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.ok   { border-color: rgba(63,185,80,.4); color: var(--green); }
+#toast.err  { border-color: rgba(248,81,73,.4);  color: var(--red); }
+
+/* ── SPINNER ─────────────────────────────────────────────────────────────*/
+.spinner {
+  width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.2);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .6s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  position: fixed; inset: 0; background: rgba(13,17,23,.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; backdrop-filter: blur(4px);
+}
+.loading-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 28px 36px; text-align: center;
+}
+.loading-box .spinner { width: 30px; height: 30px; margin-bottom: 14px; }
+
+/* ── MODAL ───────────────────────────────────────────────────────────────*/
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 400; backdrop-filter: blur(4px);
+}
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px 16px 0 0; width: 100%; max-width: 560px;
+  padding: 24px 20px; max-height: 90vh; overflow-y: auto;
+  animation: slideUp .25s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.modal-title { font-family: var(--display); font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- ══ TOAST ══════════════════════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ══ LOGIN ══════════════════════════════════════════════════════════════ -->
+<div id="screen-login">
+  <div class="login-box">
+    <div class="login-logo">SSTT<span>·</span>Mat</div>
+    <div class="login-sub">Gestión de materiales y presupuestos</div>
+
+    <div class="form-group">
+      <label>Usuario</label>
+      <select id="login-select">
+        <option value="">Cargando usuarios…</option>
+      </select>
+    </div>
+
+    <label>PIN de acceso</label>
+    <div class="pin-row" id="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+
+    <div class="pin-pad" id="pin-pad">
+      <button class="pin-key" data-v="1">1</button>
+      <button class="pin-key" data-v="2">2</button>
+      <button class="pin-key" data-v="3">3</button>
+      <button class="pin-key" data-v="4">4</button>
+      <button class="pin-key" data-v="5">5</button>
+      <button class="pin-key" data-v="6">6</button>
+      <button class="pin-key" data-v="7">7</button>
+      <button class="pin-key" data-v="8">8</button>
+      <button class="pin-key" data-v="9">9</button>
+      <button class="pin-key" data-v="*" style="opacity:0;pointer-events:none"></button>
+      <button class="pin-key" data-v="0">0</button>
+      <button class="pin-key del" data-v="del">⌫</button>
+    </div>
+
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ══ APP ════════════════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-brand">SSTT<span>·</span>Mat</div>
+    <div class="topbar-user">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <span id="user-name-top">—</span>
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="padding:4px 10px;font-size:.75rem;">Salir</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- ── DASHBOARD ─────────────────────────────────────────────────── -->
+    <div class="screen active" id="screen-dashboard">
+      <div class="screen-title">Panel <span class="accent">general</span></div>
+
+      <!-- Barra de presupuesto global -->
+      <div class="card" style="margin-bottom:12px;padding:16px 18px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+          <div style="font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Presupuesto total del mes</div>
+          <div style="font-family:var(--mono);font-size:.8rem;color:var(--text2)" id="kpi-total-label">—</div>
+        </div>
+        <div style="height:10px;background:var(--border2);border-radius:5px;overflow:hidden;display:flex">
+          <div id="bar-consumido" style="height:100%;background:var(--green);transition:width .6s ease" title="Consumido (entregado)"></div>
+          <div id="bar-comprometido" style="height:100%;background:var(--accent);transition:width .6s ease" title="Comprometido (aprobado)"></div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:7px;font-size:.72rem">
+          <span style="color:var(--green)">● Consumido: <strong id="legend-consumido">—</strong></span>
+          <span style="color:var(--accent)">● Comprometido: <strong id="legend-comprometido">—</strong></span>
+          <span style="color:var(--text3)">● Disponible: <strong id="legend-disponible">—</strong></span>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Disponible real</div>
+          <div class="kpi-value green" id="kpi-disponible">—</div>
+          <div class="kpi-sub">Presupuesto − consumido − comprometido</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Comprometido</div>
+          <div class="kpi-value accent" id="kpi-comprometido">—</div>
+          <div class="kpi-sub">Aprobado, pendiente de entrega</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Consumido</div>
+          <div class="kpi-value" id="kpi-consumido">—</div>
+          <div class="kpi-sub" id="kpi-pct">Entregado y confirmado</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Albaranes pendientes</div>
+          <div class="kpi-value" id="kpi-albaranes">—</div>
+          <div class="kpi-sub">Aprobados sin confirmar entrega</div>
+        </div>
+      </div>
+
+      <div class="section-header">Por sociedad</div>
+      <div class="card" id="dash-sociedades"></div>
+
+      <!-- Solo Controller -->
+      <div id="dash-controller-section" class="hidden">
+        <div class="section-header">Presupuesto mensual</div>
+        <div class="card">
+          <div class="form-group">
+            <label>Sociedad A — Presupuesto mensual (€)</label>
+            <input type="number" id="presup-a" placeholder="2000">
+          </div>
+          <div class="form-group">
+            <label>Sociedad B — Presupuesto mensual (€)</label>
+            <input type="number" id="presup-b" placeholder="1500">
+          </div>
+          <button class="btn btn-primary" onclick="guardarPresupuestos()">Guardar presupuestos</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NUEVA SOLICITUD ─────────────────────────────────────────── -->
+    <div class="screen" id="screen-nueva">
+      <div class="screen-title">Nueva <span class="accent">solicitud</span></div>
+
+      <div class="card">
+        <div class="form-group">
+          <label>Sociedad</label>
+          <select id="ns-sociedad">
+            <option value="">Selecciona sociedad…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Proveedor</label>
+          <select id="ns-proveedor" onchange="onProveedorChange()">
+            <option value="">Selecciona proveedor…</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-header">Materiales solicitados</div>
+      <div id="materiales-lista"></div>
+      <button class="btn btn-ghost btn-block" onclick="addMaterial()" style="margin-bottom:16px">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Añadir material
+      </button>
+
+      <div class="card">
+        <div class="form-group">
+          <label>Urgencia</label>
+          <div class="urgencia-opts">
+            <div class="urgencia-opt" onclick="selectUrgencia(this,'Baja')">🟢 Baja</div>
+            <div class="urgencia-opt selected" onclick="selectUrgencia(this,'Normal')">🟡 Normal</div>
+            <div class="urgencia-opt" onclick="selectUrgencia(this,'Urgente')">🔴 Urgente</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notas adicionales</label>
+          <textarea id="ns-notas" rows="2" placeholder="Referencias, medidas específicas…"></textarea>
+        </div>
+        <button class="btn btn-primary btn-block" id="btn-enviar" onclick="enviarSolicitud()">
+          Enviar solicitud al proveedor
+        </button>
+      </div>
+    </div>
+
+    <!-- ── MIS SOLICITUDES ────────────────────────────────────────────── -->
+    <div class="screen" id="screen-solicitudes">
+      <div class="screen-title">Solicitudes <span class="accent">del equipo</span></div>
+      <div class="filter-bar" id="filter-bar">
+        <div class="filter-chip active" onclick="filtrarSolicitudes(this,'todas')">Todas</div>
+        <div class="filter-chip" onclick="filtrarSolicitudes(this,'Pendiente envío')">Pendientes</div>
+        <div class="filter-chip" onclick="filtrarSolicitudes(this,'Enviada')">Enviadas</div>
+        <div class="filter-chip" onclick="filtrarSolicitudes(this,'Presupuesto recibido')">Con presupuesto</div>
+        <div class="filter-chip" onclick="filtrarSolicitudes(this,'Aprobada')">Aprobadas</div>
+        <div class="filter-chip" onclick="filtrarSolicitudes(this,'Entregada')">Entregadas</div>
+      </div>
+      <div id="sol-lista"></div>
+    </div>
+
+    <!-- ── APROBACIÓN (solo Controller) ──────────────────────────────── -->
+    <div class="screen" id="screen-aprobacion">
+      <div class="screen-title">Aprobar <span class="accent">presupuestos</span></div>
+      <div id="aprobacion-lista"></div>
+    </div>
+
+    <!-- ── USUARIOS (solo Controller) ────────────────────────────────── -->
+    <div class="screen" id="screen-usuarios">
+      <div class="screen-title">Gestión de <span class="accent">usuarios</span></div>
+      <div id="usuarios-lista"></div>
+      <div class="divider"></div>
+      <div class="section-header">Nuevo usuario</div>
+      <div class="card">
+        <div class="form-group"><label>Nombre</label><input id="nu-nombre" placeholder="Nombre completo"></div>
+        <div class="form-group">
+          <label>Rol</label>
+          <select id="nu-rol"><option value="SSTT">SSTT</option><option value="Controller">Controller</option></select>
+        </div>
+        <div class="form-group"><label>PIN (4 dígitos)</label><input id="nu-pin" type="tel" maxlength="4" placeholder="1234"></div>
+        <div class="form-group"><label>Notas</label><input id="nu-notas" placeholder="Cargo, observaciones…"></div>
+        <button class="btn btn-primary btn-block" onclick="crearUsuario()">Crear usuario</button>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="navigate('dashboard',this)" id="nav-dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Panel
+    </button>
+    <button class="nav-item" onclick="navigate('nueva',this)" id="nav-nueva">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Solicitar
+    </button>
+    <button class="nav-item" onclick="navigate('solicitudes',this)" id="nav-solicitudes">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Solicitudes
+    </button>
+    <button class="nav-item hidden-controller" onclick="navigate('aprobacion',this)" id="nav-aprobacion">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Aprobar
+    </button>
+    <button class="nav-item hidden-controller" onclick="navigate('usuarios',this)" id="nav-usuarios">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Usuarios
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- ══ LOADING ════════════════════════════════════════════════════════════ -->
+<div class="loading-overlay hidden" id="loading">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div style="color:var(--text2);font-size:.85rem" id="loading-msg">Procesando…</div>
+  </div>
+</div>
+
+<!-- ══ MODAL ALBARÁN ══════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-albaran">
+  <div class="modal-box">
+    <div class="modal-title">Confirmar albarán</div>
+    <div id="modal-sol-info" style="margin-bottom:16px;font-size:.85rem;color:var(--text2)"></div>
+    <div class="form-group">
+      <label>Número de albarán</label>
+      <input id="alb-num" placeholder="ALB-XXXX o número del proveedor">
+    </div>
+    <div class="form-group">
+      <label>Foto del albarán</label>
+      <div class="photo-zone" onclick="document.getElementById('alb-foto-input').click()">
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <div style="color:var(--text2);font-size:.85rem">Toca para hacer foto o seleccionar imagen</div>
+        <img id="alb-preview" class="photo-preview">
+      </div>
+      <input type="file" id="alb-foto-input" accept="image/*" capture="environment" class="hidden" onchange="previewFoto(this)">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-success" style="flex:2" onclick="submitAlbaran()">✓ Confirmar entrega</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL REGISTRAR PRESUPUESTO ═══════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-presupuesto">
+  <div class="modal-box">
+    <div class="modal-title">Registrar presupuesto recibido</div>
+    <div id="modal-presup-info" style="margin-bottom:16px;font-size:.85rem;color:var(--text2)"></div>
+    <div class="form-group">
+      <label>Importe del presupuesto (€)</label>
+      <input type="number" id="presup-importe" placeholder="0.00" step="0.01">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="submitPresupuesto()">Guardar importe</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════════
+const API = "https://script.google.com/macros/s/AKfycbwJ06ddc-L_FF7dSZ7myIpht66vbT6HI61kJY4EUMZCGQEF-9jZ4buHgz-LwyalMVga/exec";
+const SOCIEDADES = ["Sociedad A", "Sociedad B"];
+
+// ── Estado global ────────────────────────────────────────────────────────
+let currentUser   = null;
+let pinBuffer     = "";
+let proveedores   = [];
+let solicitudes   = [];
+let materialCount = 0;
+let urgenciaVal   = "Normal";
+let modalSolFila  = null;
+let modalSolData  = null;
+let fotoBase64    = null;
+let fotoMime      = null;
+
+// ══════════════════════════════════════════════════════════════════════════
+// API HELPER
+// ══════════════════════════════════════════════════════════════════════════
+async function api(action, data = {}) {
+  const res = await fetch(API, {
+    method: "POST",
+    body: JSON.stringify({ action, ...data }),
+  });
+  return res.json();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TOAST & LOADING
+// ══════════════════════════════════════════════════════════════════════════
+function toast(msg, type = "ok") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + type;
+  setTimeout(() => t.className = "", 3000);
+}
+function loading(show, msg = "Procesando…") {
+  document.getElementById("loading").classList.toggle("hidden", !show);
+  document.getElementById("loading-msg").textContent = msg;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════════════════════════
+async function initLogin() {
+  // Cargar lista de nombres de usuarios (sin PINs) desde proveedores... usamos un endpoint especial
+  // Para la pantalla de login cargamos los usuarios desde el Apps Script
+  // Como no tenemos auth aún, usamos getUsuarios con rol "public" — el script filtra solo nombres activos
+  try {
+    // Hack: llamamos login sin pin para obtener lista de nombres
+    const r = await api("getUsuariosPublic");
+    const sel = document.getElementById("login-select");
+    sel.innerHTML = '<option value="">Selecciona tu nombre…</option>';
+    if (r.ok && r.nombres) {
+      r.nombres.forEach(n => {
+        const o = document.createElement("option");
+        o.value = n; o.textContent = n;
+        sel.appendChild(o);
+      });
+    } else {
+      // fallback: campo libre
+      sel.outerHTML = '<input id="login-select" placeholder="Escribe tu nombre…" style="width:100%;padding:10px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.9rem">';
+    }
+  } catch {
+    // campo libre si falla
+  }
+}
+
+// PIN pad
+document.getElementById("pin-pad").addEventListener("click", e => {
+  const key = e.target.closest(".pin-key");
+  if (!key) return;
+  const v = key.dataset.v;
+  if (v === "del") {
+    pinBuffer = pinBuffer.slice(0, -1);
+  } else if (pinBuffer.length < 4) {
+    pinBuffer += v;
+  }
+  updatePinDots();
+  if (pinBuffer.length === 4) doLogin();
+});
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById("d" + i).classList.toggle("filled", i < pinBuffer.length);
+  }
+}
+
+async function doLogin() {
+  const nombre = document.getElementById("login-select").value;
+  if (!nombre) {
+    showLoginError("Selecciona tu nombre primero.");
+    pinBuffer = ""; updatePinDots(); return;
+  }
+  loading(true, "Verificando acceso…");
+  const r = await api("login", { nombre, pin: pinBuffer });
+  loading(false);
+  if (r.ok) {
+    currentUser = r.usuario;
+    initApp();
+  } else {
+    pinBuffer = ""; updatePinDots();
+    showLoginError(r.error || "PIN incorrecto.");
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById("login-error");
+  el.textContent = msg; el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 3000);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// APP INIT
+// ══════════════════════════════════════════════════════════════════════════
+async function initApp() {
+  document.getElementById("screen-login").classList.add("hidden");
+  document.getElementById("app").style.display = "flex";
+
+  // Avatar y nombre
+  const initials = currentUser.nombre.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
+  document.getElementById("user-avatar").textContent = initials;
+  document.getElementById("user-name-top").textContent = currentUser.nombre;
+
+  // Controller: mostrar botones extra en nav
+  if (currentUser.rol === "Controller") {
+    document.querySelectorAll(".hidden-controller").forEach(el => el.style.display = "flex");
+  }
+
+  // Cargar datos base
+  await cargarProveedores();
+  llenarSociedades();
+  navigate("dashboard", document.getElementById("nav-dashboard"));
+  cargarDashboard();
+}
+
+function logout() {
+  currentUser = null; pinBuffer = "";
+  document.getElementById("app").style.display = "none";
+  document.getElementById("screen-login").classList.remove("hidden");
+  updatePinDots();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// NAVEGACIÓN
+// ══════════════════════════════════════════════════════════════════════════
+function navigate(screen, btn) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  document.getElementById("screen-" + screen).classList.add("active");
+  if (btn) btn.classList.add("active");
+
+  if (screen === "dashboard")   cargarDashboard();
+  if (screen === "solicitudes") cargarSolicitudes();
+  if (screen === "aprobacion")  cargarAprobacion();
+  if (screen === "usuarios")    cargarUsuarios();
+  if (screen === "nueva")       resetNuevaSolicitud();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PROVEEDORES
+// ══════════════════════════════════════════════════════════════════════════
+async function cargarProveedores() {
+  const r = await api("getProveedores");
+  if (r.ok) {
+    proveedores = r.proveedores;
+    const sel = document.getElementById("ns-proveedor");
+    sel.innerHTML = '<option value="">Selecciona proveedor…</option>';
+    proveedores.forEach(p => {
+      const o = document.createElement("option");
+      o.value = p.nombre; o.textContent = p.nombre;
+      sel.appendChild(o);
+    });
+  }
+}
+
+function llenarSociedades() {
+  const sel = document.getElementById("ns-sociedad");
+  sel.innerHTML = '<option value="">Selecciona sociedad…</option>';
+  SOCIEDADES.forEach(s => {
+    const o = document.createElement("option");
+    o.value = s; o.textContent = s; sel.appendChild(o);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════
+async function cargarDashboard() {
+  const r = await api("getDashboard");
+  if (!r.ok) return;
+  const stats = r.stats;
+
+  let totalPresup = 0, totalConsumido = 0, totalComprometido = 0, totalAlb = 0;
+  const socHtml = [];
+
+  for (const [soc, s] of Object.entries(stats)) {
+    totalPresup       += s.presupuestoMensual;
+    totalConsumido    += s.consumido;
+    totalComprometido += s.comprometido;
+    totalAlb          += s.sinAlbaran;
+
+    const disp        = s.presupuestoMensual - s.consumido - s.comprometido;
+    const pctCons     = s.presupuestoMensual > 0 ? Math.round(s.consumido    / s.presupuestoMensual * 100) : 0;
+    const pctComp     = s.presupuestoMensual > 0 ? Math.round(s.comprometido / s.presupuestoMensual * 100) : 0;
+    const pctTotal    = pctCons + pctComp;
+    const colorDisp   = disp < 0 ? 'var(--red)' : disp < s.presupuestoMensual * 0.15 ? 'var(--orange)' : 'var(--green)';
+
+    socHtml.push(`
+      <div class="soc-row">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.9rem;margin-bottom:4px">${soc}</div>
+          <div style="height:7px;background:var(--border2);border-radius:4px;overflow:hidden;display:flex;width:100%;max-width:180px">
+            <div style="height:100%;background:var(--green);width:${Math.min(pctCons,100)}%"></div>
+            <div style="height:100%;background:var(--accent);width:${Math.min(pctComp,100-pctCons)}%"></div>
+          </div>
+          <div style="font-size:.72rem;color:var(--text3);margin-top:4px">${s.solicitudes} solicitudes · ${s.sinAlbaran} albaranes pendientes</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
+          <div style="font-family:var(--display);font-size:1.05rem;font-weight:700;color:${colorDisp}">${fmt(disp)} €</div>
+          <div style="font-size:.7rem;color:var(--text3)">disponible</div>
+          <div style="font-size:.7rem;color:var(--accent);margin-top:2px">${fmt(s.comprometido)} € comprometido</div>
+          <div style="font-size:.7rem;color:var(--green)">${fmt(s.consumido)} € consumido</div>
+        </div>
+      </div>`);
+  }
+
+  document.getElementById("dash-sociedades").innerHTML = socHtml.join("");
+
+  const dispTotal  = totalPresup - totalConsumido - totalComprometido;
+  const pctCons    = totalPresup > 0 ? Math.round(totalConsumido    / totalPresup * 100) : 0;
+  const pctComp    = totalPresup > 0 ? Math.round(totalComprometido / totalPresup * 100) : 0;
+
+  // KPIs
+  document.getElementById("kpi-disponible").textContent    = fmt(dispTotal) + " €";
+  document.getElementById("kpi-comprometido").textContent  = fmt(totalComprometido) + " €";
+  document.getElementById("kpi-consumido").textContent     = fmt(totalConsumido) + " €";
+  document.getElementById("kpi-albaranes").textContent     = totalAlb;
+
+  // Barra global
+  document.getElementById("bar-consumido").style.width     = Math.min(pctCons, 100) + "%";
+  document.getElementById("bar-comprometido").style.width  = Math.min(pctComp, 100 - pctCons) + "%";
+  document.getElementById("kpi-total-label").textContent   = fmt(totalPresup) + " € presupuestado";
+  document.getElementById("legend-consumido").textContent  = fmt(totalConsumido) + " €";
+  document.getElementById("legend-comprometido").textContent = fmt(totalComprometido) + " €";
+  document.getElementById("legend-disponible").textContent = fmt(dispTotal) + " €";
+
+  if (currentUser.rol === "Controller") {
+    document.getElementById("dash-controller-section").classList.remove("hidden");
+  }
+}
+
+async function guardarPresupuestos() {
+  const a = parseFloat(document.getElementById("presup-a").value);
+  const b = parseFloat(document.getElementById("presup-b").value);
+  if (!a && !b) { toast("Introduce al menos un importe.", "err"); return; }
+  loading(true, "Guardando presupuestos…");
+  if (a) await api("setPresupuesto", { sociedad: "Sociedad A", importe: a, controller: currentUser.nombre });
+  if (b) await api("setPresupuesto", { sociedad: "Sociedad B", importe: b, controller: currentUser.nombre });
+  loading(false);
+  toast("Presupuestos actualizados ✓");
+  cargarDashboard();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// NUEVA SOLICITUD
+// ══════════════════════════════════════════════════════════════════════════
+function resetNuevaSolicitud() {
+  materialCount = 0;
+  document.getElementById("materiales-lista").innerHTML = "";
+  document.getElementById("ns-notas").value = "";
+  document.getElementById("ns-sociedad").value = "";
+  document.getElementById("ns-proveedor").value = "";
+  urgenciaVal = "Normal";
+  document.querySelectorAll(".urgencia-opt").forEach(el => {
+    el.classList.toggle("selected", el.textContent.includes("Normal"));
+  });
+  addMaterial();
+}
+
+function selectUrgencia(el, val) {
+  urgenciaVal = val;
+  document.querySelectorAll(".urgencia-opt").forEach(e => e.classList.remove("selected"));
+  el.classList.add("selected");
+}
+
+function onProveedorChange() {
+  // Recargar sugerencias de materiales al cambiar proveedor
+  document.querySelectorAll(".mat-input").forEach(inp => {
+    inp.value = "";
+    inp.dispatchEvent(new Event("input"));
+  });
+}
+
+function addMaterial() {
+  const id = ++materialCount;
+  const prov = document.getElementById("ns-proveedor").value;
+  const div = document.createElement("div");
+  div.className = "material-item";
+  div.id = "mat-" + id;
+  div.innerHTML = `
+    <button class="material-remove" onclick="removeMaterial(${id})" title="Eliminar">✕</button>
+    <div style="position:relative">
+      <label>Material</label>
+      <input class="mat-input" id="mat-desc-${id}" placeholder="Escribe para buscar o añadir nuevo…"
+        autocomplete="off"
+        oninput="onMatInput(${id}, this.value)"
+        onfocus="onMatInput(${id}, this.value)">
+      <div class="autocomplete-box hidden" id="ac-${id}"></div>
+    </div>
+    <div class="material-row" style="margin-top:8px">
+      <div><label>Cantidad</label><input type="number" class="mat-cant" id="mat-cant-${id}" value="1" min="1" step="1"></div>
+      <div><label>Unidad</label>
+        <select id="mat-uni-${id}">
+          <option>Unidad</option><option>Metro</option><option>Litro</option>
+          <option>Kilo</option><option>Caja</option><option>Paquete</option><option>Rollo</option>
+        </select>
+      </div>
+    </div>`;
+  document.getElementById("materiales-lista").appendChild(div);
+  document.getElementById("mat-desc-" + id).focus();
+
+  // Cerrar autocomplete al clicar fuera
+  document.addEventListener("click", e => {
+    if (!div.contains(e.target)) document.getElementById("ac-" + id)?.classList.add("hidden");
+  }, { once: false });
+}
+
+function removeMaterial(id) {
+  document.getElementById("mat-" + id)?.remove();
+}
+
+let acTimers = {};
+async function onMatInput(id, query) {
+  clearTimeout(acTimers[id]);
+  acTimers[id] = setTimeout(async () => {
+    const prov = document.getElementById("ns-proveedor").value;
+    const r    = await api("getMateriales", { proveedor: prov, query });
+    const box  = document.getElementById("ac-" + id);
+    if (!box) return;
+
+    if (!r.ok || !r.materiales.length) { box.classList.add("hidden"); return; }
+
+    box.innerHTML = r.materiales.map(m =>
+      `<div class="autocomplete-item" onclick="selectMaterial(${id},'${escHtml(m.material)}','${escHtml(m.unidad)}')">
+        ${escHtml(m.material)} <span style="color:var(--text3);font-size:.75rem">· ${m.unidad}</span>
+      </div>`
+    ).join("");
+    box.classList.remove("hidden");
+  }, 280);
+}
+
+function selectMaterial(id, material, unidad) {
+  document.getElementById("mat-desc-" + id).value = material;
+  const uni = document.getElementById("mat-uni-" + id);
+  for (const o of uni.options) { if (o.value === unidad) { uni.value = unidad; break; } }
+  document.getElementById("ac-" + id).classList.add("hidden");
+}
+
+async function enviarSolicitud() {
+  const sociedad  = document.getElementById("ns-sociedad").value;
+  const proveedor = document.getElementById("ns-proveedor").value;
+  const notas     = document.getElementById("ns-notas").value;
+
+  if (!sociedad)  { toast("Selecciona la sociedad.", "err"); return; }
+  if (!proveedor) { toast("Selecciona el proveedor.", "err"); return; }
+
+  // Recoger materiales
+  const materiales = [];
+  document.querySelectorAll(".material-item").forEach(item => {
+    const id   = item.id.replace("mat-","");
+    const desc = document.getElementById("mat-desc-" + id)?.value.trim();
+    const cant = document.getElementById("mat-cant-" + id)?.value;
+    const uni  = document.getElementById("mat-uni-"  + id)?.value;
+    if (desc) materiales.push({ material: desc, cantidad: cant, unidad: uni });
+  });
+
+  if (!materiales.length) { toast("Añade al menos un material.", "err"); return; }
+
+  loading(true, "Enviando solicitud…");
+  const r = await api("crearSolicitud", {
+    usuario: currentUser, sociedad, proveedor, materiales,
+    urgencia: urgenciaVal, notas,
+  });
+  loading(false);
+
+  if (r.ok) {
+    toast(`✓ ${r.id} creada. Email al proveedor en camino.`);
+    navigate("solicitudes", document.getElementById("nav-solicitudes"));
+  } else {
+    toast(r.error || "Error al enviar.", "err");
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// SOLICITUDES LIST
+// ══════════════════════════════════════════════════════════════════════════
+let filtroActivo = "todas";
+
+async function cargarSolicitudes() {
+  loading(true, "Cargando solicitudes…");
+  const r = await api("getSolicitudes", { rol: currentUser.rol, nombre: currentUser.nombre });
+  loading(false);
+  if (r.ok) { solicitudes = r.solicitudes; renderSolicitudes(); }
+}
+
+function filtrarSolicitudes(el, estado) {
+  filtroActivo = estado;
+  document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  renderSolicitudes();
+}
+
+function renderSolicitudes() {
+  const lista = document.getElementById("sol-lista");
+  const filtered = filtroActivo === "todas"
+    ? solicitudes
+    : solicitudes.filter(s => s.estado === filtroActivo);
+
+  if (!filtered.length) {
+    lista.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">No hay solicitudes en este estado.</div>`;
+    return;
+  }
+
+  lista.innerHTML = filtered.map(s => {
+    const badge = estadoBadge(s.estado);
+    const esAprobada = s.estado === "Aprobada" && !s.albaran;
+    const tieneImporte = s.presupuesto && !s.aprobado && currentUser.rol !== "Controller";
+    const puedeRegistrarPresup = s.estado === "Enviada" && currentUser.rol === "Controller";
+
+    return `
+    <div class="sol-card">
+      <div class="sol-header">
+        <div>
+          <div class="sol-id">${s.id}</div>
+          <div class="sol-proveedor">${s.proveedor}</div>
+        </div>
+        <div style="text-align:right">
+          ${badge}
+          <div style="font-size:.72rem;color:var(--text3);margin-top:4px">${s.sociedad}</div>
+        </div>
+      </div>
+      <div class="sol-materiales">${s.materiales}</div>
+      ${s.presupuesto ? `<div style="margin-top:8px;font-family:var(--mono);font-size:.9rem;color:var(--accent)">${s.presupuesto} €</div>` : ""}
+      <div class="sol-meta">
+        <span>📅 ${s.fecha}</span>
+        <span>⚡ ${s.urgencia}</span>
+        ${s.notas ? `<span>📝 ${s.notas}</span>` : ""}
+      </div>
+      <div class="sol-firma">👤 ${s.firma || s.solicitante}${s.hora ? " · " + s.hora : ""}</div>
+      ${esAprobada || puedeRegistrarPresup ? `<div class="sol-actions">
+        ${esAprobada ? `<button class="btn btn-success btn-sm" onclick="abrirModalAlbaran(${s.fila}, ${JSON.stringify(s).replace(/"/g,"'")})">📎 Confirmar albarán</button>` : ""}
+        ${puedeRegistrarPresup ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalPresupuesto(${s.fila}, '${s.id}', '${s.proveedor}')">💶 Registrar presupuesto</button>` : ""}
+      </div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function estadoBadge(estado) {
+  const map = {
+    "Pendiente envío":      "badge-pending",
+    "Enviada":              "badge-sent",
+    "Presupuesto recibido": "badge-received",
+    "Aprobada":             "badge-approved",
+    "Rechazada":            "badge-rejected",
+    "Entregada":            "badge-delivered",
+  };
+  return `<span class="badge ${map[estado] || 'badge-pending'}">${estado}</span>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MODAL ALBARÁN
+// ══════════════════════════════════════════════════════════════════════════
+function abrirModalAlbaran(fila, solData) {
+  modalSolFila = fila;
+  modalSolData = solData;
+  fotoBase64 = null; fotoMime = null;
+  document.getElementById("alb-num").value = "";
+  document.getElementById("alb-preview").style.display = "none";
+  document.getElementById("modal-sol-info").innerHTML =
+    `<strong>${solData.id}</strong> · ${solData.proveedor}<br>${solData.materiales}`;
+  document.getElementById("modal-albaran").classList.remove("hidden");
+}
+
+function previewFoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  fotoMime = file.type;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const b64 = e.target.result.split(",")[1];
+    fotoBase64 = b64;
+    const img = document.getElementById("alb-preview");
+    img.src = e.target.result;
+    img.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitAlbaran() {
+  const num = document.getElementById("alb-num").value.trim();
+  if (!num) { toast("Introduce el número de albarán.", "err"); return; }
+  loading(true, "Confirmando entrega…");
+  const r = await api("confirmarAlbaran", {
+    fila: modalSolFila,
+    numAlbaran: num,
+    usuario: currentUser,
+    fotoBase64,
+    mimeType: fotoMime,
+  });
+  loading(false);
+  cerrarModal();
+  if (r.ok) { toast("✓ Albarán confirmado. Entrega registrada."); cargarSolicitudes(); }
+  else toast(r.error || "Error al confirmar.", "err");
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MODAL PRESUPUESTO RECIBIDO
+// ══════════════════════════════════════════════════════════════════════════
+function abrirModalPresupuesto(fila, id, proveedor) {
+  modalSolFila = fila;
+  document.getElementById("presup-importe").value = "";
+  document.getElementById("modal-presup-info").innerHTML =
+    `<strong>${id}</strong> · ${proveedor}`;
+  document.getElementById("modal-presupuesto").classList.remove("hidden");
+}
+
+async function submitPresupuesto() {
+  const importe = parseFloat(document.getElementById("presup-importe").value);
+  if (!importe || importe <= 0) { toast("Introduce un importe válido.", "err"); return; }
+  loading(true, "Registrando presupuesto…");
+  // Actualizar directamente la celda de presupuesto e estado
+  const r = await api("registrarPresupuesto", {
+    fila: modalSolFila, importe, controller: currentUser.nombre
+  });
+  loading(false);
+  cerrarModal();
+  if (r.ok) { toast("✓ Presupuesto registrado."); cargarSolicitudes(); }
+  else toast(r.error || "Error.", "err");
+}
+
+function cerrarModal() {
+  document.querySelectorAll(".modal-overlay").forEach(m => m.classList.add("hidden"));
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// APROBACIÓN (Controller)
+// ══════════════════════════════════════════════════════════════════════════
+async function cargarAprobacion() {
+  if (currentUser.rol !== "Controller") return;
+  loading(true, "Cargando pendientes…");
+  const r = await api("getPresupuestos");
+  loading(false);
+  const lista = document.getElementById("aprobacion-lista");
+
+  if (!r.ok || !r.pendientes.length) {
+    lista.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">✓ No hay presupuestos pendientes de aprobación.</div>`;
+    return;
+  }
+
+  lista.innerHTML = r.pendientes.map(p => `
+    <div class="presup-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-family:var(--mono);font-size:.78rem;color:var(--text2)">${p.id}</div>
+          <div style="font-weight:600;margin-top:2px">${p.proveedor}</div>
+          <div style="font-size:.75rem;color:var(--text3)">${p.sociedad}</div>
+        </div>
+        <div class="presup-importe">${fmt(p.presupuesto)} €</div>
+      </div>
+      <div style="font-size:.82rem;color:var(--text2);margin:8px 0;white-space:pre-line">${p.materiales}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-danger btn-sm" style="flex:1" onclick="aprobar(${p.fila},'Rechazado')">✕ Rechazar</button>
+        <button class="btn btn-success btn-sm" style="flex:2" onclick="aprobar(${p.fila},'Aprobado')">✓ Aprobar presupuesto</button>
+      </div>
+    </div>`).join("");
+}
+
+async function aprobar(fila, decision) {
+  loading(true, decision + "…");
+  const r = await api("aprobarPresupuesto", { fila, decision, controller: currentUser.nombre });
+  loading(false);
+  if (r.ok) { toast(r.mensaje); cargarAprobacion(); }
+  else toast(r.error || "Error.", "err");
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// USUARIOS (Controller)
+// ══════════════════════════════════════════════════════════════════════════
+async function cargarUsuarios() {
+  if (currentUser.rol !== "Controller") return;
+  const r = await api("getUsuarios", { rol: currentUser.rol });
+  const lista = document.getElementById("usuarios-lista");
+  if (!r.ok) return;
+
+  lista.innerHTML = r.usuarios.map(u => `
+    <div class="user-row">
+      <div class="user-info">
+        <div class="user-name">${u.nombre}</div>
+        <div class="user-meta">${u.rol} · Último acceso: ${u.ultimoAcceso || "—"} · ${u.solicitudes || 0} solicitudes</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="badge ${u.activo === 'Sí' ? 'badge-approved' : 'badge-rejected'}">${u.activo === 'Sí' ? 'Activo' : 'Inactivo'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="toggleUsuario(${u.fila},'${u.activo}')" title="${u.activo === 'Sí' ? 'Desactivar' : 'Activar'}">
+          ${u.activo === 'Sí' ? '⏸' : '▶'}
+        </button>
+      </div>
+    </div>`).join("");
+}
+
+async function toggleUsuario(fila, activo) {
+  const accion = activo === "Sí" ? "desactivar" : "activar";
+  const r = await api("gestionarUsuario", { rol: currentUser.rol, accion, fila });
+  if (r.ok) { toast(r.mensaje); cargarUsuarios(); }
+  else toast(r.error || "Error.", "err");
+}
+
+async function crearUsuario() {
+  const nombre = document.getElementById("nu-nombre").value.trim();
+  const nuevoPin = document.getElementById("nu-pin").value.trim();
+  const nuevoRol = document.getElementById("nu-rol").value;
+  const notas = document.getElementById("nu-notas").value.trim();
+
+  if (!nombre || !nuevoPin) { toast("Nombre y PIN son obligatorios.", "err"); return; }
+  if (nuevoPin.length !== 4 || isNaN(nuevoPin)) { toast("El PIN debe ser de 4 dígitos.", "err"); return; }
+
+  loading(true, "Creando usuario…");
+  const r = await api("gestionarUsuario", {
+    rol: currentUser.rol, accion: "crear",
+    nuevoNombre: nombre, nuevoPin, nuevoRol, notas
+  });
+  loading(false);
+  if (r.ok) {
+    toast(r.mensaje);
+    document.getElementById("nu-nombre").value = "";
+    document.getElementById("nu-pin").value = "";
+    document.getElementById("nu-notas").value = "";
+    cargarUsuarios();
+  } else toast(r.error || "Error.", "err");
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════════════════
+function fmt(n) {
+  if (n === null || n === undefined || n === "") return "—";
+  return parseFloat(n).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function escHtml(s) { return String(s).replace(/['"&<>]/g, c => ({ "'": "&#39;", '"': "&quot;", "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+// ══════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════
+initLogin();
+</script>
+</body>
+</html>
