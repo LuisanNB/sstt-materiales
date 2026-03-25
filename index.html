@@ -542,13 +542,8 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
       <div id="dash-controller-section" class="hidden">
         <div class="section-header">Presupuesto mensual</div>
         <div class="card">
-          <div class="form-group">
-            <label>Sociedad A — Presupuesto mensual (€)</label>
-            <input type="number" id="presup-a" placeholder="2000">
-          </div>
-          <div class="form-group">
-            <label>Sociedad B — Presupuesto mensual (€)</label>
-            <input type="number" id="presup-b" placeholder="1500">
+          <div id="presupuestos-fields">
+            <!-- Se genera dinámicamente con las sociedades reales -->
           </div>
           <button class="btn btn-primary" onclick="guardarPresupuestos()">Guardar presupuestos</button>
         </div>
@@ -800,7 +795,7 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 // ══════════════════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════════════════
-const API = "https://script.google.com/macros/s/AKfycbwFJBG9VHHAIRABo9c-ktWtKsDY5IR1hUxa93Ru_azsemMlto3yk5pgT70F4yJ5nkwv/exec";
+const API = "https://script.google.com/macros/s/AKfycbw-dhZb_5zp1qhtVbkPz7OVK2AK0RdxdOZ2fPvjI7Cw95pzlENSmv-naRalQ8kWXsrg/exec";
 const SOCIEDADES = []; // se cargan desde Apps Script
 
 // ── Estado global ────────────────────────────────────────────────────────
@@ -818,14 +813,52 @@ let fotoMime      = null;
 // ══════════════════════════════════════════════════════════════════════════
 // API HELPER
 // ══════════════════════════════════════════════════════════════════════════
-async function api(action, data = {}) {
+// Caché en memoria para esta sesión
+const CACHE = {};
+const CACHE_TTL = {
+  getDashboard:   60 * 1000,   // 1 minuto
+  getProveedores: 10 * 60 * 1000, // 10 minutos
+  getSociedades:  10 * 60 * 1000, // 10 minutos
+  getMateriales:  5  * 60 * 1000, // 5 minutos
+  getSolicitudes: 30 * 1000,   // 30 segundos
+  getIncidencias: 30 * 1000,   // 30 segundos
+};
+
+async function api(action, data = {}, opts = {}) {
+  const cacheKey = action + JSON.stringify(data);
+  const ttl = CACHE_TTL[action];
+
+  // Si hay caché válida y no se fuerza refresco, devolver inmediato
+  if (ttl && !opts.forceRefresh && CACHE[cacheKey]) {
+    const { value, ts } = CACHE[cacheKey];
+    if (Date.now() - ts < ttl) return value;
+  }
+
   const res = await fetch(API, {
     method: "POST",
     redirect: "follow",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({ action, ...data }),
   });
-  return res.json();
+  const json = await res.json();
+
+  // Guardar en caché si la respuesta es ok
+  if (ttl && json.ok) {
+    CACHE[cacheKey] = { value: json, ts: Date.now() };
+  }
+  return json;
+}
+
+// Invalida caché de una acción concreta
+function invalidarCache(...actions) {
+  actions.forEach(action => {
+    Object.keys(CACHE).forEach(k => { if (k.startsWith(action)) delete CACHE[k]; });
+  });
+}
+
+// Fetch silencioso en background — actualiza caché sin bloquear UI
+function refreshEnBackground(action, data = {}) {
+  api(action, data, { forceRefresh: true }).catch(() => {});
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1031,9 +1064,25 @@ async function llenarSociedades() {
 // ══════════════════════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════════════════════
-async function cargarDashboard() {
+async function cargarDashboard(silencioso = false) {
+  // Intentar mostrar caché inmediatamente si existe
+  const cacheKey = "getDashboard{}";
+  if (CACHE[cacheKey] && !silencioso) {
+    renderDashboard(CACHE[cacheKey].value);
+    // Refrescar en background sin spinner
+    api("getDashboard", {}, { forceRefresh: true }).then(r => {
+      if (r.ok) renderDashboard(r);
+    }).catch(() => {});
+    return;
+  }
+  if (!silencioso) loading(true, "Cargando panel…");
   const r = await api("getDashboard");
+  if (!silencioso) loading(false);
   if (!r.ok) return;
+  renderDashboard(r);
+}
+
+async function renderDashboard(r) {
   const stats = r.stats;
 
   let totalPresup = 0, totalConsumido = 0, totalComprometido = 0, totalAlb = 0;
@@ -1092,16 +1141,33 @@ async function cargarDashboard() {
 
   if (currentUser.rol === "Controller") {
     document.getElementById("dash-controller-section").classList.remove("hidden");
+    renderPresupuestosFields(Object.keys(stats));
   }
+
+function renderPresupuestosFields(sociedades) {
+  const container = document.getElementById("presupuestos-fields");
+  if (!container) return;
+  container.innerHTML = sociedades.map((s, i) => `
+    <div class="form-group">
+      <label>${s} — Presupuesto mensual (€)</label>
+      <input type="number" id="presup-soc-${i}" placeholder="0" data-sociedad="${s}">
+    </div>`).join("");
 }
 
 async function guardarPresupuestos() {
-  const a = parseFloat(document.getElementById("presup-a").value);
-  const b = parseFloat(document.getElementById("presup-b").value);
-  if (!a && !b) { toast("Introduce al menos un importe.", "err"); return; }
+  const inputs = document.querySelectorAll("#presupuestos-fields input");
+  if (!inputs.length) { toast("No hay sociedades configuradas.", "err"); return; }
+  let alguno = false;
+  inputs.forEach(inp => { if (parseFloat(inp.value) > 0) alguno = true; });
+  if (!alguno) { toast("Introduce al menos un importe.", "err"); return; }
   loading(true, "Guardando presupuestos…");
-  if (a) await api("setPresupuesto", { sociedad: "Sociedad A", importe: a, controller: currentUser.nombre });
-  if (b) await api("setPresupuesto", { sociedad: "Sociedad B", importe: b, controller: currentUser.nombre });
+  for (const inp of inputs) {
+    const importe = parseFloat(inp.value);
+    const sociedad = inp.dataset.sociedad;
+    if (importe > 0 && sociedad) {
+      await api("setPresupuesto", { sociedad, importe, controller: currentUser.nombre });
+    }
+  }
   loading(false);
   toast("Presupuestos actualizados ✓");
   cargarDashboard();
@@ -1250,6 +1316,7 @@ async function enviarSolicitud() {
   loading(false);
 
   if (r.ok) {
+    invalidarCache("getSolicitudes", "getDashboard");
     toast(`✓ ${r.id} creada. Email al proveedor en camino.`);
     navigate("solicitudes", document.getElementById("nav-solicitudes"));
   } else {
@@ -1263,6 +1330,14 @@ async function enviarSolicitud() {
 let filtroActivo = "todas";
 
 async function cargarSolicitudes() {
+  const cacheKey = "getSolicitudes" + JSON.stringify({ rol: currentUser.rol, nombre: currentUser.nombre });
+  if (CACHE[cacheKey]) {
+    solicitudes = CACHE[cacheKey].value.solicitudes;
+    renderSolicitudes();
+    api("getSolicitudes", { rol: currentUser.rol, nombre: currentUser.nombre }, { forceRefresh: true })
+      .then(r => { if (r.ok) { solicitudes = r.solicitudes; renderSolicitudes(); } }).catch(() => {});
+    return;
+  }
   loading(true, "Cargando solicitudes…");
   const r = await api("getSolicitudes", { rol: currentUser.rol, nombre: currentUser.nombre });
   loading(false);
@@ -1379,7 +1454,7 @@ async function submitAlbaran() {
   });
   loading(false);
   cerrarModal();
-  if (r.ok) { toast("✓ Albarán confirmado. Entrega registrada."); cargarSolicitudes(); }
+  if (r.ok) { invalidarCache("getSolicitudes", "getDashboard"); toast("✓ Albarán confirmado. Entrega registrada."); cargarSolicitudes(); }
   else toast(r.error || "Error al confirmar.", "err");
 }
 
@@ -1449,7 +1524,7 @@ async function aprobar(fila, decision) {
   loading(true, decision + "…");
   const r = await api("aprobarPresupuesto", { fila, decision, controller: currentUser.nombre });
   loading(false);
-  if (r.ok) { toast(r.mensaje); cargarAprobacion(); }
+  if (r.ok) { invalidarCache("getSolicitudes", "getDashboard", "getPresupuestos"); toast(r.mensaje); cargarAprobacion(); }
   else toast(r.error || "Error.", "err");
 }
 
@@ -1541,8 +1616,17 @@ function previewFotoInc(input) {
 }
 
 async function cargarIncidencias() {
+  const data = { rol: currentUser.rol, filtroEstado: incFiltroActivo };
+  const cacheKey = "getIncidencias" + JSON.stringify(data);
+  if (CACHE[cacheKey]) {
+    incidencias = CACHE[cacheKey].value.incidencias;
+    renderIncidencias();
+    api("getIncidencias", data, { forceRefresh: true })
+      .then(r => { if (r.ok) { incidencias = r.incidencias; renderIncidencias(); } }).catch(() => {});
+    return;
+  }
   loading(true, "Cargando incidencias…");
-  const r = await api("getIncidencias", { rol: currentUser.rol, filtroEstado: incFiltroActivo });
+  const r = await api("getIncidencias", data);
   loading(false);
   if (r.ok) { incidencias = r.incidencias; renderIncidencias(); }
 }
@@ -1617,6 +1701,7 @@ async function enviarIncidencia() {
   loading(false);
 
   if (r.ok) {
+    invalidarCache("getIncidencias", "getDashboard");
     toast(`✓ ${r.id} registrada. Notificación enviada.`);
     // Reset form
     document.getElementById("ni-desc").value = "";
