@@ -217,7 +217,8 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 }
 .nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; }
 .nav-item.active { color: var(--accent); }
-.nav-item.hidden-controller { display: none; }
+.nav-item.role-controller { display: none; }
+.nav-item.role-no-tecnico { display: none; }
 
 /* ── PANTALLAS ─────────────────────────────────────────────────────────── */
 .screen { display: none; animation: fadeUp .25s ease; }
@@ -365,6 +366,29 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 #toast.ok   { border-color: rgba(63,185,80,.4); color: var(--green); }
 #toast.err  { border-color: rgba(248,81,73,.4);  color: var(--red); }
+
+
+/* ── INCIDENCIAS ──────────────────────────────────────────────────────── */
+.inc-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 16px; margin-bottom: 10px;
+  transition: border-color .2s;
+}
+.inc-card.alta   { border-left: 3px solid var(--red); }
+.inc-card.media  { border-left: 3px solid var(--accent); }
+.inc-card.baja   { border-left: 3px solid var(--green); }
+.inc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.inc-id  { font-family: var(--mono); font-size: .78rem; color: var(--text2); }
+.inc-tipo { display: inline-flex; align-items: center; gap: 4px; font-size: .75rem;
+  padding: 2px 8px; border-radius: 10px; background: var(--surface2);
+  color: var(--text2); margin-bottom: 4px; }
+.inc-desc { font-size: .88rem; font-weight: 500; margin-bottom: 4px; }
+.inc-ubicacion { font-size: .78rem; color: var(--text2); }
+.inc-meta { display: flex; gap: 10px; margin-top: 8px; font-size: .74rem; color: var(--text3); flex-wrap: wrap; }
+.inc-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.badge-abierta   { background: rgba(248,81,73,.15);  color: var(--red);    border: 1px solid rgba(248,81,73,.3); }
+.badge-encurso   { background: rgba(232,160,32,.15); color: var(--accent); border: 1px solid rgba(232,160,32,.3); }
+.badge-resuelta  { background: rgba(63,185,80,.15);  color: var(--green);  border: 1px solid rgba(63,185,80,.3); }
 
 /* ── SPINNER ─────────────────────────────────────────────────────────────*/
 .spinner {
@@ -578,7 +602,7 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 
     <!-- ── MIS SOLICITUDES ────────────────────────────────────────────── -->
     <div class="screen" id="screen-solicitudes">
-      <div class="screen-title">Solicitudes <span class="accent">del equipo</span></div>
+      <div class="screen-title" id="sol-screen-title">Solicitudes <span class="accent">del equipo</span></div>
       <div class="filter-bar" id="filter-bar">
         <div class="filter-chip active" onclick="filtrarSolicitudes(this,'todas')">Todas</div>
         <div class="filter-chip" onclick="filtrarSolicitudes(this,'Pendiente envío')">Pendientes</div>
@@ -588,6 +612,68 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
         <div class="filter-chip" onclick="filtrarSolicitudes(this,'Entregada')">Entregadas</div>
       </div>
       <div id="sol-lista"></div>
+    </div>
+
+    <!-- ── INCIDENCIAS ───────────────────────────────────────────────── -->
+    <div class="screen" id="screen-incidencias">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="screen-title" style="margin-bottom:0">Incidencias</div>
+        <button class="btn btn-primary btn-sm" onclick="navigate('nueva-incidencia', document.getElementById('nav-incidencias'))">+ Nueva</button>
+      </div>
+      <div class="filter-bar" id="inc-filter-bar">
+        <div class="filter-chip active" onclick="filtrarIncidencias(this,'todas')">Todas</div>
+        <div class="filter-chip" onclick="filtrarIncidencias(this,'Abierta')">🔴 Abiertas</div>
+        <div class="filter-chip" onclick="filtrarIncidencias(this,'En curso')">🟡 En curso</div>
+        <div class="filter-chip" onclick="filtrarIncidencias(this,'Resuelta')">✅ Resueltas</div>
+      </div>
+      <div id="inc-lista"></div>
+    </div>
+
+    <!-- ── NUEVA INCIDENCIA ──────────────────────────────────────────────── -->
+    <div class="screen" id="screen-nueva-incidencia">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('incidencias',document.getElementById('nav-incidencias'))">← Volver</button>
+        <div class="screen-title" style="margin-bottom:0">Nueva <span class="accent">incidencia</span></div>
+      </div>
+      <div class="card">
+        <div class="form-group">
+          <label>Sociedad</label>
+          <select id="ni-sociedad"><option value="">Selecciona sociedad…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="urgencia-opt selected" onclick="selectTipo(this,'Avería')" id="tipo-averia">🔧 Avería</div>
+            <div class="urgencia-opt" onclick="selectTipo(this,'Solicitud')" id="tipo-solicitud">📋 Solicitud</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea id="ni-desc" rows="3" placeholder="Describe el problema o la intervención necesaria…"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Ubicación</label>
+          <input id="ni-ubicacion" placeholder="Ej: Barra principal, Sala VIP, Baños planta 1…">
+        </div>
+        <div class="form-group">
+          <label>Prioridad</label>
+          <div class="urgencia-opts">
+            <div class="urgencia-opt" onclick="selectPrioridad(this,'Baja')">🟢 Baja</div>
+            <div class="urgencia-opt selected" onclick="selectPrioridad(this,'Media')">🟡 Media</div>
+            <div class="urgencia-opt" onclick="selectPrioridad(this,'Alta')">🔴 Alta</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Foto del problema (opcional)</label>
+          <div class="photo-zone" onclick="document.getElementById('ni-foto-input').click()">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <div style="color:var(--text2);font-size:.85rem">Toca para hacer foto</div>
+            <img id="ni-foto-preview" class="photo-preview">
+          </div>
+          <input type="file" id="ni-foto-input" accept="image/*" capture="environment" class="hidden" onchange="previewFotoInc(this)">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="enviarIncidencia()">Registrar incidencia</button>
+      </div>
     </div>
 
     <!-- ── APROBACIÓN (solo Controller) ──────────────────────────────── -->
@@ -606,7 +692,7 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
         <div class="form-group"><label>Nombre</label><input id="nu-nombre" placeholder="Nombre completo"></div>
         <div class="form-group">
           <label>Rol</label>
-          <select id="nu-rol"><option value="SSTT">SSTT</option><option value="Controller">Controller</option></select>
+          <select id="nu-rol"><option value="Técnico">Técnico SSTT</option><option value="Jefe SSTT">Jefe SSTT</option><option value="Controller">Controller</option></select>
         </div>
         <div class="form-group"><label>PIN (4 dígitos)</label><input id="nu-pin" type="tel" maxlength="4" placeholder="1234"></div>
         <div class="form-group"><label>Notas</label><input id="nu-notas" placeholder="Cargo, observaciones…"></div>
@@ -618,11 +704,11 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 
   <!-- Bottom nav -->
   <nav class="bottom-nav">
-    <button class="nav-item active" onclick="navigate('dashboard',this)" id="nav-dashboard">
+    <button class="nav-item active role-no-tecnico" onclick="navigate('dashboard',this)" id="nav-dashboard">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Panel
     </button>
-    <button class="nav-item" onclick="navigate('nueva',this)" id="nav-nueva">
+    <button class="nav-item role-no-tecnico" onclick="navigate('nueva',this)" id="nav-nueva">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Solicitar
     </button>
@@ -630,11 +716,15 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
       Solicitudes
     </button>
-    <button class="nav-item hidden-controller" onclick="navigate('aprobacion',this)" id="nav-aprobacion">
+    <button class="nav-item" onclick="navigate('incidencias',this)" id="nav-incidencias">
+      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Incidencias
+    </button>
+    <button class="nav-item role-controller" onclick="navigate('aprobacion',this)" id="nav-aprobacion">
       <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       Aprobar
     </button>
-    <button class="nav-item hidden-controller" onclick="navigate('usuarios',this)" id="nav-usuarios">
+    <button class="nav-item role-controller" onclick="navigate('usuarios',this)" id="nav-usuarios">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
       Usuarios
     </button>
@@ -675,6 +765,21 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
   </div>
 </div>
 
+<!-- ══ MODAL RESOLUCIÓN INCIDENCIA ══════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-resolucion">
+  <div class="modal-box">
+    <div class="modal-title">Cerrar incidencia <span id="resol-inc-id" class="accent"></span></div>
+    <div class="form-group">
+      <label>¿Cómo se resolvió?</label>
+      <textarea id="resol-texto" rows="3" placeholder="Describe la solución aplicada…"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-success" style="flex:2" onclick="submitResolucion()">✓ Cerrar incidencia</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL REGISTRAR PRESUPUESTO ═══════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="modal-presupuesto">
   <div class="modal-box">
@@ -695,8 +800,8 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 // ══════════════════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════════════════
-const API = "https://script.google.com/macros/s/AKfycbwJ06ddc-L_FF7dSZ7myIpht66vbT6HI61kJY4EUMZCGQEF-9jZ4buHgz-LwyalMVga/exec";
-const SOCIEDADES = ["Sociedad A", "Sociedad B"];
+const API = "https://script.google.com/macros/s/AKfycbwlMqXBbQo_ZwUVpBNmKTp90XJOigrOeyhrdSEu_8jYoZzB-0LfgUmnCkVnoUerPGQl/exec";
+const SOCIEDADES = []; // se cargan desde Apps Script
 
 // ── Estado global ────────────────────────────────────────────────────────
 let currentUser   = null;
@@ -795,6 +900,7 @@ async function doLogin() {
   loading(false);
   if (r.ok) {
     currentUser = r.usuario;
+    localStorage.setItem("sstt_session", JSON.stringify({ usuario: r.usuario, ts: Date.now() }));
     initApp();
   } else {
     pinBuffer = ""; updatePinDots();
@@ -809,6 +915,35 @@ function showLoginError(msg) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// PERMISOS POR ROL
+// ══════════════════════════════════════════════════════════════════════════
+function aplicarPermisosRol(rol) {
+  // Ocultar todo primero, luego mostrar lo que corresponde
+  document.querySelectorAll(".role-controller").forEach(el => el.style.display = "none");
+  document.querySelectorAll(".role-no-tecnico").forEach(el => el.style.display = "none");
+
+  if (rol === "Controller") {
+    document.querySelectorAll(".role-controller").forEach(el => el.style.display = "flex");
+    document.querySelectorAll(".role-no-tecnico").forEach(el => el.style.display = "flex");
+  } else if (rol === "Jefe SSTT") {
+    document.querySelectorAll(".role-no-tecnico").forEach(el => el.style.display = "flex");
+  }
+  // Técnico: solo ve Solicitudes — no se muestra nada extra
+
+  // Ajustar pantalla inicial y título solicitudes
+  if (rol === "Técnico") {
+    document.getElementById("sol-screen-title").innerHTML =
+      'Albaranes <span class="accent">pendientes</span>';
+    // Activar filtro "Aprobadas" por defecto para técnicos
+    const chips = document.querySelectorAll(".filter-chip");
+    chips.forEach(c => c.classList.remove("active"));
+    const chipAprobada = [...chips].find(c => c.textContent.trim() === "Aprobadas");
+    if (chipAprobada) chipAprobada.classList.add("active");
+    filtroActivo = "Aprobada";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // APP INIT
 // ══════════════════════════════════════════════════════════════════════════
 async function initApp() {
@@ -820,20 +955,21 @@ async function initApp() {
   document.getElementById("user-avatar").textContent = initials;
   document.getElementById("user-name-top").textContent = currentUser.nombre;
 
-  // Controller: mostrar botones extra en nav
-  if (currentUser.rol === "Controller") {
-    document.querySelectorAll(".hidden-controller").forEach(el => el.style.display = "flex");
-  }
+  // Mostrar nav según rol
+  aplicarPermisosRol(currentUser.rol);
 
   // Cargar datos base
   await cargarProveedores();
-  llenarSociedades();
-  navigate("dashboard", document.getElementById("nav-dashboard"));
-  cargarDashboard();
+  await llenarSociedades();
+  const pantallaInicial = currentUser.rol === "Técnico" ? "solicitudes" : "dashboard";
+  const navInicial = document.getElementById("nav-" + pantallaInicial);
+  navigate(pantallaInicial, navInicial);
+  if (currentUser.rol !== "Técnico") cargarDashboard();
 }
 
 function logout() {
   currentUser = null; pinBuffer = "";
+  localStorage.removeItem("sstt_session");
   document.getElementById("app").style.display = "none";
   document.getElementById("screen-login").classList.remove("hidden");
   updatePinDots();
@@ -848,10 +984,12 @@ function navigate(screen, btn) {
   document.getElementById("screen-" + screen).classList.add("active");
   if (btn) btn.classList.add("active");
 
-  if (screen === "dashboard")   cargarDashboard();
-  if (screen === "solicitudes") cargarSolicitudes();
-  if (screen === "aprobacion")  cargarAprobacion();
-  if (screen === "usuarios")    cargarUsuarios();
+  if (screen === "dashboard")        cargarDashboard();
+  if (screen === "solicitudes")      cargarSolicitudes();
+  if (screen === "aprobacion")       cargarAprobacion();
+  if (screen === "usuarios")         cargarUsuarios();
+  if (screen === "incidencias")      cargarIncidencias();
+  if (screen === "nueva-incidencia") prepararNuevaIncidencia();
   if (screen === "nueva")       resetNuevaSolicitud();
 }
 
@@ -872,10 +1010,12 @@ async function cargarProveedores() {
   }
 }
 
-function llenarSociedades() {
+async function llenarSociedades() {
+  const r   = await api("getSociedades");
   const sel = document.getElementById("ns-sociedad");
   sel.innerHTML = '<option value="">Selecciona sociedad…</option>';
-  SOCIEDADES.forEach(s => {
+  const lista = (r.ok && r.sociedades.length) ? r.sociedades : SOCIEDADES;
+  lista.forEach(s => {
     const o = document.createElement("option");
     o.value = s; o.textContent = s; sel.appendChild(o);
   });
@@ -963,6 +1103,21 @@ async function guardarPresupuestos() {
 // ══════════════════════════════════════════════════════════════════════════
 // NUEVA SOLICITUD
 // ══════════════════════════════════════════════════════════════════════════
+async function prepararNuevaIncidencia() {
+  // Rellenar desplegable de sociedades
+  const sel = document.getElementById("ni-sociedad");
+  if (sel.options.length <= 1) {
+    const r = await api("getSociedades");
+    const lista = (r.ok && r.sociedades.length) ? r.sociedades : ["BIERKONIG ARENAL","AMRUM BEACH CLUB"];
+    lista.forEach(s => {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s; sel.appendChild(o);
+    });
+  }
+  tipoIncVal = "Avería"; prioridadVal = "Media";
+  incFotoBase64 = null; incFotoMime = null;
+}
+
 function resetNuevaSolicitud() {
   materialCount = 0;
   document.getElementById("materiales-lista").innerHTML = "";
@@ -1111,9 +1266,13 @@ function filtrarSolicitudes(el, estado) {
 
 function renderSolicitudes() {
   const lista = document.getElementById("sol-lista");
+  // Técnico solo ve solicitudes Aprobadas (pendientes de entrega)
+  const base = currentUser.rol === "Técnico"
+    ? solicitudes.filter(s => s.estado === "Aprobada")
+    : solicitudes;
   const filtered = filtroActivo === "todas"
-    ? solicitudes
-    : solicitudes.filter(s => s.estado === filtroActivo);
+    ? base
+    : base.filter(s => s.estado === filtroActivo);
 
   if (!filtered.length) {
     lista.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">No hay solicitudes en este estado.</div>`;
@@ -1338,6 +1497,163 @@ async function crearUsuario() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// INCIDENCIAS
+// ══════════════════════════════════════════════════════════════════════════
+let incidencias   = [];
+let tipoIncVal    = "Avería";
+let prioridadVal  = "Media";
+let incFotoBase64 = null;
+let incFotoMime   = null;
+let incFiltroActivo = "todas";
+
+function selectTipo(el, val) {
+  tipoIncVal = val;
+  document.querySelectorAll("#ni-averia, #ni-solicitud, [id^='tipo-']").forEach(e => e.classList.remove("selected"));
+  el.classList.add("selected");
+}
+function selectPrioridad(el, val) {
+  prioridadVal = val;
+  el.closest(".urgencia-opts").querySelectorAll(".urgencia-opt").forEach(e => e.classList.remove("selected"));
+  el.classList.add("selected");
+}
+function previewFotoInc(input) {
+  const file = input.files[0]; if (!file) return;
+  incFotoMime = file.type;
+  const reader = new FileReader();
+  reader.onload = e => {
+    incFotoBase64 = e.target.result.split(",")[1];
+    const img = document.getElementById("ni-foto-preview");
+    img.src = e.target.result; img.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+
+async function cargarIncidencias() {
+  loading(true, "Cargando incidencias…");
+  const r = await api("getIncidencias", { rol: currentUser.rol, filtroEstado: incFiltroActivo });
+  loading(false);
+  if (r.ok) { incidencias = r.incidencias; renderIncidencias(); }
+}
+
+function filtrarIncidencias(el, estado) {
+  incFiltroActivo = estado;
+  document.querySelectorAll("#inc-filter-bar .filter-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  cargarIncidencias();
+}
+
+function renderIncidencias() {
+  const lista = document.getElementById("inc-lista");
+  if (!incidencias.length) {
+    lista.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">No hay incidencias en este estado.</div>`;
+    return;
+  }
+  lista.innerHTML = incidencias.map(inc => {
+    const prioBadge = { "Alta": "badge-rejected", "Media": "badge-pending", "Baja": "badge-approved" }[inc.prioridad] || "badge-pending";
+    const estadoBadgeClass = { "Abierta": "badge-abierta", "En curso": "badge-encurso", "Resuelta": "badge-resuelta" }[inc.estado] || "badge-pending";
+    const prioClass = { "Alta": "alta", "Media": "media", "Baja": "baja" }[inc.prioridad] || "";
+    const puedeGestionar = currentUser.rol !== "Controller";
+    const estaAbierta = inc.estado === "Abierta";
+    const estaEnCurso = inc.estado === "En curso";
+
+    return `
+    <div class="inc-card ${prioClass}">
+      <div class="inc-header">
+        <div>
+          <div class="inc-id">${inc.id} · ${inc.sociedad}</div>
+          <div class="inc-tipo">${inc.tipo === "Avería" ? "🔧" : "📋"} ${inc.tipo}</div>
+          <div class="inc-desc">${inc.descripcion}</div>
+          <div class="inc-ubicacion">📍 ${inc.ubicacion}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:8px">
+          <span class="badge ${estadoBadgeClass}">${inc.estado}</span>
+          <div style="margin-top:4px"><span class="badge ${prioBadge}">${inc.prioridad}</span></div>
+        </div>
+      </div>
+      <div class="inc-meta">
+        <span>📅 ${inc.fecha} ${inc.hora}</span>
+        <span>👤 ${inc.reportadoPor}</span>
+        ${inc.asignadoA ? `<span>🔧 ${inc.asignadoA}</span>` : ""}
+        ${inc.fotoUrl ? `<a href="${inc.fotoUrl}" target="_blank" style="color:var(--blue);font-size:.74rem">📷 Ver foto</a>` : ""}
+      </div>
+      ${inc.resolucion ? `<div style="margin-top:8px;font-size:.8rem;color:var(--green);background:rgba(63,185,80,.08);padding:8px 10px;border-radius:6px">✓ ${inc.resolucion}</div>` : ""}
+      ${puedeGestionar && (estaAbierta || estaEnCurso) ? `
+      <div class="inc-actions">
+        ${estaAbierta ? `<button class="btn btn-ghost btn-sm" onclick="cambiarEstadoInc(${inc.fila},'En curso')">▶ Iniciar</button>` : ""}
+        <button class="btn btn-success btn-sm" onclick="abrirModalResolucion(${inc.fila}, '${inc.id}')">✓ Marcar resuelta</button>
+      </div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+async function enviarIncidencia() {
+  const sociedad    = document.getElementById("ni-sociedad").value;
+  const descripcion = document.getElementById("ni-desc").value.trim();
+  const ubicacion   = document.getElementById("ni-ubicacion").value.trim();
+
+  if (!sociedad)    { toast("Selecciona la sociedad.", "err"); return; }
+  if (!descripcion) { toast("Describe la incidencia.", "err"); return; }
+  if (!ubicacion)   { toast("Indica la ubicación.", "err"); return; }
+
+  loading(true, "Registrando incidencia…");
+  const r = await api("crearIncidencia", {
+    usuario: currentUser, sociedad,
+    tipo: tipoIncVal, descripcion, ubicacion,
+    prioridad: prioridadVal,
+    fotoBase64: incFotoBase64, mimeType: incFotoMime,
+  });
+  loading(false);
+
+  if (r.ok) {
+    toast(`✓ ${r.id} registrada. Notificación enviada.`);
+    // Reset form
+    document.getElementById("ni-desc").value = "";
+    document.getElementById("ni-ubicacion").value = "";
+    incFotoBase64 = null; incFotoMime = null;
+    document.getElementById("ni-foto-preview").style.display = "none";
+    navigate("incidencias", document.getElementById("nav-incidencias"));
+  } else {
+    toast(r.error || "Error al registrar.", "err");
+  }
+}
+
+async function cambiarEstadoInc(fila, nuevoEstado) {
+  loading(true, "Actualizando…");
+  const r = await api("actualizarEstado", {
+    fila, nuevoEstado,
+    asignadoA: currentUser.nombre,
+    usuario: currentUser,
+  });
+  loading(false);
+  if (r.ok) { toast(r.mensaje); cargarIncidencias(); }
+  else toast(r.error || "Error.", "err");
+}
+
+function abrirModalResolucion(fila, id) {
+  modalSolFila = fila;
+  document.getElementById("resol-inc-id").textContent = id;
+  document.getElementById("resol-texto").value = "";
+  document.getElementById("modal-resolucion").classList.remove("hidden");
+}
+
+async function submitResolucion() {
+  const texto = document.getElementById("resol-texto").value.trim();
+  if (!texto) { toast("Describe cómo se resolvió.", "err"); return; }
+  loading(true, "Cerrando incidencia…");
+  const r = await api("actualizarEstado", {
+    fila: modalSolFila,
+    nuevoEstado: "Resuelta",
+    resolucion: texto,
+    asignadoA: currentUser.nombre,
+    usuario: currentUser,
+  });
+  loading(false);
+  cerrarModal();
+  if (r.ok) { toast("✓ Incidencia resuelta."); cargarIncidencias(); }
+  else toast(r.error || "Error.", "err");
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════════════════════════════════
 function fmt(n) {
@@ -1347,9 +1663,28 @@ function fmt(n) {
 function escHtml(s) { return String(s).replace(/['"&<>]/g, c => ({ "'": "&#39;", '"': "&quot;", "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 
 // ══════════════════════════════════════════════════════════════════════════
-// INIT
+// INIT — recuperar sesión si existe, si no mostrar login
 // ══════════════════════════════════════════════════════════════════════════
-initLogin();
+(async function() {
+  const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 horas en ms
+  try {
+    const saved = localStorage.getItem("sstt_session");
+    if (saved) {
+      const { usuario, ts } = JSON.parse(saved);
+      // Si la sesión tiene menos de 8 horas, restaurar directamente
+      if (usuario && ts && (Date.now() - ts) < SESSION_TTL) {
+        currentUser = usuario;
+        initApp();
+        return;
+      } else {
+        // Sesión caducada — limpiar
+        localStorage.removeItem("sstt_session");
+      }
+    }
+  } catch { localStorage.removeItem("sstt_session"); }
+  // Sin sesión válida → mostrar pantalla de login normal
+  initLogin();
+})();
 </script>
 </body>
 </html>
