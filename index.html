@@ -800,7 +800,7 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 // ══════════════════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════════════════
-const API = "https://script.google.com/macros/s/AKfycbwlMqXBbQo_ZwUVpBNmKTp90XJOigrOeyhrdSEu_8jYoZzB-0LfgUmnCkVnoUerPGQl/exec";
+const API = "https://script.google.com/macros/s/AKfycbznCh7BpekZpc_Hi0Mvva9XhRZeFaDvLRE3ue2aULy-DP3gr_lmKTrzRhEixC8ef1FY/exec";
 const SOCIEDADES = []; // se cargan desde Apps Script
 
 // ── Estado global ────────────────────────────────────────────────────────
@@ -1011,14 +1011,21 @@ async function cargarProveedores() {
 }
 
 async function llenarSociedades() {
-  const r   = await api("getSociedades");
-  const sel = document.getElementById("ns-sociedad");
-  sel.innerHTML = '<option value="">Selecciona sociedad…</option>';
-  const lista = (r.ok && r.sociedades.length) ? r.sociedades : SOCIEDADES;
-  lista.forEach(s => {
-    const o = document.createElement("option");
-    o.value = s; o.textContent = s; sel.appendChild(o);
-  });
+  try {
+    const r   = await api("getSociedades");
+    const sel = document.getElementById("ns-sociedad");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Selecciona sociedad…</option>';
+    const lista = (r.ok && r.sociedades && r.sociedades.length) ? r.sociedades : ["BIERKOENIG ARENAL","AMRUM BEACH CLUB"];
+    lista.forEach(s => {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s; sel.appendChild(o);
+    });
+    // Guardar lista en variable global para reutilizar
+    window._sociedades = lista;
+  } catch(e) {
+    console.error("Error cargando sociedades:", e);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1104,16 +1111,21 @@ async function guardarPresupuestos() {
 // NUEVA SOLICITUD
 // ══════════════════════════════════════════════════════════════════════════
 async function prepararNuevaIncidencia() {
-  // Rellenar desplegable de sociedades
-  const sel = document.getElementById("ni-sociedad");
-  if (sel.options.length <= 1) {
-    const r = await api("getSociedades");
-    const lista = (r.ok && r.sociedades.length) ? r.sociedades : ["BIERKONIG ARENAL","AMRUM BEACH CLUB"];
-    lista.forEach(s => {
-      const o = document.createElement("option");
-      o.value = s; o.textContent = s; sel.appendChild(o);
-    });
-  }
+  try {
+    const sel = document.getElementById("ni-sociedad");
+    if (!sel) return;
+    if (sel.options.length <= 1) {
+      // Usar sociedades ya cargadas o pedirlas de nuevo
+      const lista = window._sociedades && window._sociedades.length
+        ? window._sociedades
+        : ["BIERKOENIG ARENAL","AMRUM BEACH CLUB"];
+      sel.innerHTML = '<option value="">Selecciona sociedad…</option>';
+      lista.forEach(s => {
+        const o = document.createElement("option");
+        o.value = s; o.textContent = s; sel.appendChild(o);
+      });
+    }
+  } catch(e) { console.error("Error prep incidencia:", e); }
   tipoIncVal = "Avería"; prioridadVal = "Media";
   incFotoBase64 = null; incFotoMime = null;
 }
