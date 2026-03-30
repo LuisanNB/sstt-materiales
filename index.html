@@ -493,7 +493,14 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 
     <!-- ── DASHBOARD ─────────────────────────────────────────────────── -->
     <div class="screen active" id="screen-dashboard">
-      <div class="screen-title">Panel <span class="accent">general</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="screen-title" style="margin-bottom:0">Panel <span class="accent">general</span></div>
+        <select id="mes-selector" onchange="cambiarMes(this.value)"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+          color:var(--text);font-size:.8rem;padding:6px 10px;font-family:var(--mono)">
+          <option value="">Cargando…</option>
+        </select>
+      </div>
 
       <!-- Barra de presupuesto global -->
       <div class="card" style="margin-bottom:12px;padding:16px 18px">
@@ -795,11 +802,12 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5p
 // ══════════════════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════════════════
-const API = "https://script.google.com/macros/s/AKfycbxFThI_dKk7KEhqoJgM9DPwiOFEIohf1WXFUWKYwQIJy71jlZpP43l7Ppu_rIN-6hOY/exec";
+const API = "https://script.google.com/macros/s/AKfycbxlQM8gwyUDRiFPnMd6-t-uf96pffq2uXYC3-oHZUW_Y8k5nZlm21vRHif0CaqTmbK4/exec";
 const SOCIEDADES = []; // se cargan desde Apps Script
 
 // ── Estado global ────────────────────────────────────────────────────────
 let currentUser   = null;
+let mesSeleccionado = ""; // mes activo en dashboard (YYYY-MM)
 let pinBuffer     = "";
 let proveedores   = [];
 let solicitudes   = [];
@@ -997,6 +1005,7 @@ async function initApp() {
   // Cargar datos base
   await cargarProveedores();
   await llenarSociedades();
+  await cargarMeses();
   const pantallaInicial = currentUser.rol === "Técnico" ? "solicitudes" : "dashboard";
   const navInicial = document.getElementById("nav-" + pantallaInicial);
   navigate(pantallaInicial, navInicial);
@@ -1067,19 +1076,45 @@ async function llenarSociedades() {
 // ══════════════════════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════════════════════
+async function cargarMeses() {
+  const r = await api("getMeses");
+  const sel = document.getElementById("mes-selector");
+  if (!sel) return;
+  if (r.ok && r.meses.length) {
+    sel.innerHTML = r.meses.map((m, i) => {
+      const [year, month] = m.split("-");
+      const nombre = new Date(year, month-1).toLocaleString("es-ES", { month:"long", year:"numeric" });
+      return `<option value="${m}" ${i===0?"selected":""}>${nombre.charAt(0).toUpperCase()+nombre.slice(1)}</option>`;
+    }).join("");
+    mesSeleccionado = r.meses[0];
+  } else {
+    // fallback: mes actual
+    const now = new Date();
+    const m = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
+    mesSeleccionado = m;
+    sel.innerHTML = `<option value="${m}">${new Date().toLocaleString("es-ES",{month:"long",year:"numeric"})}</option>`;
+  }
+}
+
+function cambiarMes(mes) {
+  mesSeleccionado = mes;
+  invalidarCache("getDashboard");
+  cargarDashboard();
+}
+
 async function cargarDashboard(silencioso = false) {
   // Intentar mostrar caché inmediatamente si existe
-  const cacheKey = "getDashboard{}";
+  const dashData = { mes: mesSeleccionado };
+  const cacheKey = "getDashboard" + JSON.stringify(dashData);
   if (CACHE[cacheKey] && !silencioso) {
     renderDashboard(CACHE[cacheKey].value);
-    // Refrescar en background sin spinner
-    api("getDashboard", {}, { forceRefresh: true }).then(r => {
+    api("getDashboard", dashData, { forceRefresh: true }).then(r => {
       if (r.ok) renderDashboard(r);
     }).catch(() => {});
     return;
   }
   if (!silencioso) loading(true, "Cargando panel…");
-  const r = await api("getDashboard");
+  const r = await api("getDashboard", dashData);
   if (!silencioso) loading(false);
   if (!r.ok) return;
   renderDashboard(r);
@@ -1137,7 +1172,8 @@ async function renderDashboard(r) {
   // Barra global
   document.getElementById("bar-consumido").style.width     = Math.min(pctCons, 100) + "%";
   document.getElementById("bar-comprometido").style.width  = Math.min(pctComp, 100 - pctCons) + "%";
-  document.getElementById("kpi-total-label").textContent   = fmt(totalPresup) + " € presupuestado";
+  const mesLabel = r.mes ? (() => { const [y,m] = r.mes.split("-"); return new Date(y,m-1).toLocaleString("es-ES",{month:"long",year:"numeric"}); })() : "";
+  document.getElementById("kpi-total-label").textContent = fmt(totalPresup) + " € · " + mesLabel;
   document.getElementById("legend-consumido").textContent  = fmt(totalConsumido) + " €";
   document.getElementById("legend-comprometido").textContent = fmt(totalComprometido) + " €";
   document.getElementById("legend-disponible").textContent = fmt(dispTotal) + " €";
@@ -1169,7 +1205,7 @@ async function guardarPresupuestos() {
     const importe = parseFloat(inp.value);
     const sociedad = inp.dataset.sociedad;
     if (importe > 0 && sociedad) {
-      await api("setPresupuesto", { sociedad, importe, controller: currentUser.nombre });
+      await api("setPresupuesto", { sociedad, importe, mes: mesSeleccionado, controller: currentUser.nombre });
     }
   }
   loading(false);
