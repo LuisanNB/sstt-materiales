@@ -815,7 +815,7 @@ label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 6p
 // ══════════════════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════════════════
-const API = "https://script.google.com/macros/s/AKfycbzN1J2mADSlduDqov_DG_Iho30SQOtt19ePVnlWBUWFjABG03JCOSZvD78WQbVcHWH-/exec";
+const API = "https://script.google.com/macros/s/AKfycbyMxGsXWA2rSqNhTHx1VZ_3dD2sR5oYPXgZiQU1CVi70tVLgtHSofTSaQFQWZVKkil3/exec";
 const SOCIEDADES = []; // se cargan desde Apps Script
 
 // ── Estado global ────────────────────────────────────────────────────────
@@ -1336,7 +1336,8 @@ function addMaterial() {
       </div>
     </div>`;
   document.getElementById("materiales-lista").appendChild(div);
-  document.getElementById("mat-desc-" + id).focus();
+  // Solo hacer focus si el usuario añade material manualmente (no en carga inicial)
+  if (materialCount > 1) document.getElementById("mat-desc-" + id).focus();
 
   // Cerrar autocomplete al clicar fuera
   document.addEventListener("click", e => {
